@@ -97,7 +97,7 @@ std::string service_path          = "/";
 std::string host                  = "";
 std::string bucket                = "";
 std::string appid                 = "";
-std::string endpoint              = "us-east-1";
+std::string endpoint              = "cn-north";
 s3fs_log_level debug_level        = S3FS_LOG_ERR;
 const char*    s3fs_log_nest[S3FS_LOG_NEST_MAX] = {"", "  ", "    ", "      "};
 

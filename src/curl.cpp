@@ -1959,39 +1959,46 @@ string S3fsCurl::CalcSignature(string method, string strMD5, string content_type
   string q_key_time = q_key_time_tmp.str();
   const unsigned char* kdata = reinterpret_cast<const unsigned char*>(q_key_time.data());
 
-  unsigned char* sign_key = NULL;
+  unsigned char* sign_key_raw = NULL;
   unsigned int sign_key_len = 0;
-  s3fs_HMAC(key, key_len, kdata, q_key_time.size(), &sign_key, &sign_key_len);
-  
+  s3fs_HMAC(key, key_len, kdata, q_key_time.size(), &sign_key_raw, &sign_key_len);
+  std::string sign_key = s3fs_hex(sign_key_raw, sign_key_len);
+  S3FS_PRN_INFO(" q-key_time is %s, new sign key is : %s", q_key_time.c_str(), sign_key.c_str());
+
   string FormatString;
   FormatString += lower(method) + "\n";
-  FormatString += lower(resource) + "\n";
-  FormatString += get_canonical_headers(requestHeaders);
-  
+  FormatString += lower(resource) + "\n\n"; // no params
+  FormatString += get_canonical_headers(requestHeaders) + "\n";
+
+  S3FS_PRN_INFO("Format string is : %s", FormatString.c_str());
+ 
   const unsigned char* sdata = reinterpret_cast<const unsigned char*>(FormatString.data());
   int sdata_len              = FormatString.size();
   unsigned char* md          = NULL;
   unsigned int md_len        = 0;
 
-  s3fs_sha1_hex(sdata, sdata_len, &md, &md_len);
-
+  string format_string_sha1 = s3fs_sha1_hex(sdata, sdata_len, &md, &md_len);
+  S3FS_PRN_INFO("format string sha1 : %s", format_string_sha1.c_str());
   string StringToSign;
   StringToSign += string("sha1\n");
   StringToSign += q_key_time + "\n";
-  StringToSign += string(reinterpret_cast<char*>(md), static_cast<int>(md_len)) + "\n";
+  StringToSign += format_string_sha1 + "\n";
 
   unsigned char* sign_data     = NULL;
   unsigned int sign_len        = 0;
-  s3fs_HMAC(sign_key, sign_key_len, reinterpret_cast<const unsigned char*>(StringToSign.data()), StringToSign.size(), &sign_data, &sign_len);
+  s3fs_HMAC(sign_key.data(), sign_key.size(), reinterpret_cast<const unsigned char*>(StringToSign.data()), StringToSign.size(), &sign_data, &sign_len);
+  string sign_data_hex = s3fs_hex(sign_data, sign_len);
 
+  S3FS_PRN_INFO("string to sign %s", StringToSign.c_str());
+  S3FS_PRN_INFO("format string hmac-sha1 %s", sign_data);
   Signature += "q-sign-algorithm=sha1&";
   Signature += string("q-ak=") + S3fsCurl::COSAccessKeyId + "&";
   Signature += string("q-sign-time=") + q_key_time + "&";
-  Signature += string("q-key-time=") + q_key_time + "&";
+  Signature += string("q-key-time=") + q_key_time + "&q-url-param-list=&";
   Signature += string("q-header-list=") + get_canonical_header_keys(requestHeaders) + "&";
-  Signature += string("q-signature=") + string(reinterpret_cast<char*>(sign_data), static_cast<int>(sign_len));
+  Signature += string("q-signature=") + sign_data_hex;
 
-  free(sign_key);
+  free(sign_key_raw);
   free(md);
   free(sign_data);
   return Signature;
@@ -2570,7 +2577,7 @@ int S3fsCurl::ListBucketRequest(const char* tpath, const char* query)
   requestHeaders = curl_slist_sort_insert(requestHeaders, "Content-Type", NULL);
 
   if(!S3fsCurl::IsPublicBucket()){
-	  string Signature = CalcSignature("GET", "", "", date, (resource + "/"));
+	  string Signature = CalcSignature("GET", "", "", date, resource);
 	  requestHeaders   = curl_slist_sort_insert(requestHeaders, "Authorization:", Signature.c_str());
   }
 
@@ -2890,7 +2897,6 @@ int S3fsCurl::UploadMultipartPostSetup(const char* tpath, int part_num, string& 
   string turl;
   MakeUrlResource(get_realpath(tpath).c_str(), resource, turl);
 
-  resource          += urlargs;
   turl              += urlargs;
   url                = prepare_url(turl.c_str());
   path               = get_realpath(tpath);
@@ -2977,7 +2983,6 @@ int S3fsCurl::CopyMultipartPostRequest(const char* from, const char* to, int par
   string turl;
   MakeUrlResource(get_realpath(to).c_str(), resource, turl);
 
-  resource       += urlargs;
   turl           += urlargs;
   url             = prepare_url(turl.c_str());
   path            = get_realpath(to);
@@ -3926,8 +3931,14 @@ bool MakeUrlResource(const char* realpath, string& resourcepath, string& url)
     return false;
   }
 
-  resourcepath = service_path + bucket + realpath;
-  url          = host + urlEncode(resourcepath);
+  string resourcepathwithbucket;
+  if (*realpath == '/')  {
+      resourcepath = realpath;
+  } else {
+      resourcepath = service_path + realpath;
+  }
+  resourcepathwithbucket = service_path + bucket + realpath;
+  url          = host + urlEncode(resourcepathwithbucket);
   return true;
 }
 
@@ -3952,7 +3963,7 @@ string prepare_url(const char* url)
   uri  = url_str.substr(0, uri_length);
 
   if(!pathrequeststyle){
-    host = appid + "-" +  bucket + "." + url_str.substr(uri_length, bucket_pos - uri_length).c_str();
+    host = bucket + "-" +  appid + "." + url_str.substr(uri_length, bucket_pos - uri_length).c_str();
     path = url_str.substr((bucket_pos + bucket_length));
   }else{
     host = url_str.substr(uri_length, bucket_pos - uri_length).c_str();
