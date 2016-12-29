@@ -1968,7 +1968,7 @@ string S3fsCurl::CalcSignature(string method, string strMD5, string content_type
   string FormatString;
   FormatString += lower(method) + "\n";
   FormatString += lower(resource) + "\n\n"; // no params
-  FormatString += get_canonical_headers(requestHeaders) + "\n";
+  FormatString += get_canonical_headers(requestHeaders); // \n has been append
 
   S3FS_PRN_INFO("Format string is : %s", FormatString.c_str());
  
@@ -2072,7 +2072,7 @@ int S3fsCurl::DeleteRequest(const char* tpath)
   requestHeaders = curl_slist_sort_insert(requestHeaders, "Content-Type", NULL);
   if(!S3fsCurl::IsPublicBucket()){
 	  string Signature = CalcSignature("DELETE", "", "", date, resource);
-	  requestHeaders   = curl_slist_sort_insert(requestHeaders, "Authorization:", Signature.c_str());
+	  requestHeaders   = curl_slist_sort_insert(requestHeaders, "Authorization", Signature.c_str());
   }
 
   curl_easy_setopt(hCurl, CURLOPT_URL, url.c_str());
@@ -2193,7 +2193,7 @@ bool S3fsCurl::PreHeadRequest(const char* tpath, const char* bpath, const char* 
 
   if(!S3fsCurl::IsPublicBucket()){
 	  string Signature = CalcSignature("HEAD", "", "", date, resource);
-	  requestHeaders   = curl_slist_sort_insert(requestHeaders, "Authorization:", Signature.c_str());
+	  requestHeaders   = curl_slist_sort_insert(requestHeaders, "Authorization", Signature.c_str());
   }
 
   curl_easy_setopt(hCurl, CURLOPT_URL, url.c_str());
@@ -2293,7 +2293,7 @@ int S3fsCurl::PutHeadRequest(const char* tpath, headers_t& meta, bool is_copy)
 
   if(!S3fsCurl::IsPublicBucket()){
 	  string Signature = CalcSignature("PUT", "", ContentType, date, resource);
-	  requestHeaders   = curl_slist_sort_insert(requestHeaders, "Authorization:", Signature.c_str());
+	  requestHeaders   = curl_slist_sort_insert(requestHeaders, "Authorization", Signature.c_str());
   }
 
   // setopt
@@ -2391,7 +2391,7 @@ int S3fsCurl::PutRequest(const char* tpath, headers_t& meta, int fd)
 
   if(!S3fsCurl::IsPublicBucket()){
 	  string Signature = CalcSignature("PUT", strMD5, ContentType, date, resource);
-	  requestHeaders   = curl_slist_sort_insert(requestHeaders, "Authorization:",Signature.c_str());
+	  requestHeaders   = curl_slist_sort_insert(requestHeaders, "Authorization",Signature.c_str());
   }
 
   // setopt
@@ -2456,7 +2456,7 @@ int S3fsCurl::PreGetObjectRequest(const char* tpath, int fd, off_t start, ssize_
 
   if(!S3fsCurl::IsPublicBucket()){
 	  string Signature = CalcSignature("GET", "", "", date, resource);
-	  requestHeaders   = curl_slist_sort_insert(requestHeaders, "Authorization:", Signature.c_str());
+	  requestHeaders   = curl_slist_sort_insert(requestHeaders, "Authorization", Signature.c_str());
   }
 
   // setopt
@@ -2528,7 +2528,7 @@ int S3fsCurl::CheckBucket(void)
 
   if(!S3fsCurl::IsPublicBucket()){
 	  string Signature = CalcSignature("GET", "", "", date, resource);
-	  requestHeaders   = curl_slist_sort_insert(requestHeaders, "Authorization:", Signature.c_str());
+	  requestHeaders   = curl_slist_sort_insert(requestHeaders, "Authorization", Signature.c_str());
   }
 
   // setopt
@@ -2578,7 +2578,7 @@ int S3fsCurl::ListBucketRequest(const char* tpath, const char* query)
 
   if(!S3fsCurl::IsPublicBucket()){
 	  string Signature = CalcSignature("GET", "", "", date, resource);
-	  requestHeaders   = curl_slist_sort_insert(requestHeaders, "Authorization:", Signature.c_str());
+	  requestHeaders   = curl_slist_sort_insert(requestHeaders, "Authorization", Signature.c_str());
   }
 
   // setopt
@@ -2654,7 +2654,7 @@ int S3fsCurl::PreMultipartPostRequest(const char* tpath, headers_t& meta, string
 
   if(!S3fsCurl::IsPublicBucket()){
 	  string Signature = CalcSignature("POST", "", contype, date, resource);
-	  requestHeaders   = curl_slist_sort_insert(requestHeaders, "Authorization:",  Signature.c_str());
+	  requestHeaders   = curl_slist_sort_insert(requestHeaders, "Authorization",  Signature.c_str());
   }
 
   // setopt
@@ -2740,7 +2740,7 @@ int S3fsCurl::CompleteMultipartPostRequest(const char* tpath, string& upload_id,
 
   if(!S3fsCurl::IsPublicBucket()){
 	  string Signature = CalcSignature("POST", "", contype, date, resource);
-	  requestHeaders   = curl_slist_sort_insert(requestHeaders, "Authorization:", Signature.c_str());
+	  requestHeaders   = curl_slist_sort_insert(requestHeaders, "Authorization", Signature.c_str());
   }
 
   // setopt
@@ -2789,7 +2789,7 @@ int S3fsCurl::MultipartListRequest(string& body)
 
   if(!S3fsCurl::IsPublicBucket()){
 	  string Signature = CalcSignature("GET", "", "", date, resource);
-	  requestHeaders   = curl_slist_sort_insert(requestHeaders, "Authorization:", Signature.c_str());
+	  requestHeaders   = curl_slist_sort_insert(requestHeaders, "Authorization", Signature.c_str());
   }
 
   // setopt
@@ -2838,7 +2838,7 @@ int S3fsCurl::AbortMultipartUpload(const char* tpath, string& upload_id)
 
   if(!S3fsCurl::IsPublicBucket()){
 	  string Signature = CalcSignature("DELETE", "", "", date, resource);
-	  requestHeaders   = curl_slist_sort_insert(requestHeaders, "Authorization:", Signature.c_str());
+	  requestHeaders   = curl_slist_sort_insert(requestHeaders, "Authorization", Signature.c_str());
   }
 
   curl_easy_setopt(hCurl, CURLOPT_URL, url.c_str());
@@ -2917,7 +2917,7 @@ int S3fsCurl::UploadMultipartPostSetup(const char* tpath, int part_num, string& 
 
   if(!S3fsCurl::IsPublicBucket()){
 	  string Signature = CalcSignature("PUT", strMD5, "", date, resource);
-	  requestHeaders   = curl_slist_sort_insert(requestHeaders, "Authorization:", Signature.c_str());
+	  requestHeaders   = curl_slist_sort_insert(requestHeaders, "Authorization", Signature.c_str());
   }
 
   // setopt
@@ -3008,7 +3008,7 @@ int S3fsCurl::CopyMultipartPostRequest(const char* from, const char* to, int par
 
   if(!S3fsCurl::IsPublicBucket()){
 	  string Signature = CalcSignature("PUT", "", ContentType, date, resource);
-	  requestHeaders   = curl_slist_sort_insert(requestHeaders, "Authorization:", Signature.c_str());
+	  requestHeaders   = curl_slist_sort_insert(requestHeaders, "Authorization", Signature.c_str());
   }
 
   // setopt
@@ -3891,7 +3891,12 @@ string get_canonical_headers(const struct curl_slist* list)
       continue;
     }
     canonical_headers += strhead;
-    canonical_headers += "\n";
+    canonical_headers += "&";
+  }
+  if (canonical_headers.size() > 0 && canonical_headers.at(canonical_headers.size() - 1) == '&') {
+      canonical_headers[canonical_headers.size() - 1] = '\n';
+  } else {
+      canonical_headers += '\n';
   }
   return canonical_headers;
 }
@@ -3918,7 +3923,9 @@ string get_canonical_header_keys(const struct curl_slist* list)
       continue;
     }
     canonical_headers += strhead;
-    canonical_headers += ";";
+    if (list->next) {
+        canonical_headers += ";";
+    }
   }
   return canonical_headers;
 }
