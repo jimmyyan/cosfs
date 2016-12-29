@@ -37,8 +37,8 @@ sudo yum install automake gcc-c++ git libcurl-devel libxml2-devel \
 然后您可以在github上下载源码并编译安装：
 
 ```
-git clone https://github.com/XXX/ossfs.git
-cd ossfs
+git clone https://github.com/XXX/cosfs.git
+cd cosfs
 ./autogen.sh
 ./configure
 make
@@ -55,21 +55,24 @@ echo my-bucket:my-access-key-id:my-access-key-secret > /etc/passwd-cosfs
 chmod 640 /etc/passwd-cosfs
 ```
 
-将cos bucket mount到指定目录,注意 需要在bucke前面指定appid
+将cos bucket mount到指定目录,注意 需要在bucke前面指定*appid*
 ```
 cosfs my-appid:my-bucket my-mount-point -ourl=my-cos-endpoint
 ```
 #### 示例
 
-将`my-bucket`这个bucket挂载到`/tmp/ossfs`目录下，AccessKeyId是`faint`，
-AccessKeySecret是`123`，oss endpoint是`http://cn-south.myqcloud.com`
-
+将`my-bucket`这个bucket挂载到`/tmp/cosfs`目录下，AccessKeyId是`faint`，
+AccessKeySecret是`123`，cos endpoint是`http://cn-south.myqcloud.com`
+cn-south 对应华南广州地域
+cn-north 对应华北天津地域
+cn-east 对应华东上海地域
 ```
 echo my-bucket:faint:123 > /etc/passwd-ossfs
 chmod 640 /etc/passwd-cosfs
 mkdir /tmp/cosfs
-cosfs my-bucket /tmp/cosfs -ourl=http://cn-south.myqcloud.com
+cosfs appid:my-bucket /tmp/cosfs -ourl=http://cn-south.myqcloud.com -odbglevel=info -ouse_case=/path/to/local_cache
 ```
+-ouse_cache 指定了使用本地cache来缓存临时文件，进一步提高性能，如果不需要本地cache或者本地磁盘容量有限，可不指定该选项
 
 卸载bucket:
 
