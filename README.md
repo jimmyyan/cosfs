@@ -70,7 +70,7 @@ cn-east 对应华东上海地域
 echo my-bucket:faint:123 > /etc/passwd-ossfs
 chmod 640 /etc/passwd-cosfs
 mkdir /tmp/cosfs
-cosfs appid:my-bucket /tmp/cosfs -ourl=http://cn-south.myqcloud.com -odbglevel=info -ouse_case=/path/to/local_cache
+cosfs appid:my-bucket /tmp/cosfs -ourl=http://cn-south.myqcloud.com -odbglevel=info -ouse_cache=/path/to/local_cache
 ```
 -ouse_cache 指定了使用本地cache来缓存临时文件，进一步提高性能，如果不需要本地cache或者本地磁盘容量有限，可不指定该选项
 
