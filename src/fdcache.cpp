@@ -1,7 +1,5 @@
 /*
- * s3fs - FUSE-based file system backed by Aliyun OSS
- *
- * Copyright 2007-2013 Takeshi Nakatani <ggtakec.com>
+ * s3fs - FUSE-based file system backed by Tencentyun COS
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -826,7 +824,7 @@ int FdEntity::Open(headers_t* pmeta, ssize_t size, time_t time)
     size_orgmeta = 0;
   }
 
-  // set mtime(set "x-oss-meta-mtime" in orgmeta)
+  // set mtime(set "x-cos-meta-mtime" in orgmeta)
   if(-1 != time){
     if(0 != SetMtime(time)){
       S3FS_PRN_ERR("failed to set mtime. errno(%d)", errno);
@@ -921,7 +919,7 @@ int FdEntity::SetMtime(time_t time)
       return -errno;
     }
   }
-  orgmeta["x-oss-meta-mtime"] = str(time);
+  orgmeta["x-cos-meta-mtime"] = str(time);
 
   return 0;
 }
@@ -932,7 +930,7 @@ bool FdEntity::UpdateMtime(void)
   if(!GetStats(st)){
     return false;
   }
-  orgmeta["x-oss-meta-mtime"] = str(st.st_mtime);
+  orgmeta["x-cos-meta-mtime"] = str(st.st_mtime);
   return true;
 }
 
@@ -949,19 +947,19 @@ bool FdEntity::GetSize(size_t& size)
 
 bool FdEntity::SetMode(mode_t mode)
 {
-  orgmeta["x-oss-meta-mode"] = str(mode);
+  orgmeta["x-cos-meta-mode"] = str(mode);
   return true;
 }
 
 bool FdEntity::SetUId(uid_t uid)
 {
-  orgmeta["x-oss-meta-uid"] = str(uid);
+  orgmeta["x-cos-meta-uid"] = str(uid);
   return true;
 }
 
 bool FdEntity::SetGId(gid_t gid)
 {
-  orgmeta["x-oss-meta-gid"] = str(gid);
+  orgmeta["x-cos-meta-gid"] = str(gid);
   return true;
 }
 

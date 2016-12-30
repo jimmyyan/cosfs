@@ -1,7 +1,5 @@
 /*
- * s3fs - FUSE-based file system backed by Aliyun OSS
- *
- * Copyright 2007-2008 Randy Rizun <rrizun@gmail.com>
+ * s3fs - FUSE-based file system backed by Tencent COS
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -702,7 +700,7 @@ size_t S3fsCurl::HeaderCallback(void* data, size_t blockSize, size_t numBlocks, 
   stringstream ss(header);
 
   if(getline(ss, key, ':')){
-    // Force to lower, only "x-oss"
+    // Force to lower, only "x-cos"
     string lkey = key;
     transform(lkey.begin(), lkey.end(), lkey.begin(), static_cast<int (*)(int)>(std::tolower));
     if(lkey.compare(0, 5, "x-cos") == 0){
@@ -1091,7 +1089,7 @@ bool S3fsCurl::UploadMultipartPostCallback(S3fsCurl* s3fscurl)
     return false;
   }
   // check etag(md5);
-  // XXX oss etag requires upper case.
+  // XXX cos etag requires upper case.
   if(NULL == strstr(s3fscurl->headdata->str(), upper(s3fscurl->partdata.etag).c_str())){
     return false;
   }
@@ -2239,7 +2237,7 @@ int S3fsCurl::HeadRequest(const char* tpath, headers_t& meta)
     }else if(key == "last-modified"){
       meta["Last-Modified"] = value;
     }else if(key.substr(0, 5) == "x-cos"){
-      meta[key] = value;		// key is lower case for "x-oss"
+      meta[key] = value;		// key is lower case for "x-cos"
     }
   }
   return 0;
@@ -2280,7 +2278,7 @@ int S3fsCurl::PutHeadRequest(const char* tpath, headers_t& meta, bool is_copy)
     }
   }
 
-  // "x-oss-acl", storage class, sse
+  // "x-cos-acl", storage class, sse
   requestHeaders = curl_slist_sort_insert(requestHeaders, "x-cos-acl", S3fsCurl::default_acl.c_str());
   if(REDUCED_REDUNDANCY == GetStorageClass()){
     requestHeaders = curl_slist_sort_insert(requestHeaders, "x-cos-storage-class", "REDUCED_REDUNDANCY");
@@ -2377,7 +2375,7 @@ int S3fsCurl::PutRequest(const char* tpath, headers_t& meta, int fd)
       requestHeaders = curl_slist_sort_insert(requestHeaders, iter->first.c_str(), value.c_str());
     }
   }
-  // "x-oss-acl", storage class, sse
+  // "x-cos-acl", storage class, sse
   requestHeaders = curl_slist_sort_insert(requestHeaders, "x-cos-acl", S3fsCurl::default_acl.c_str());
   if(REDUCED_REDUNDANCY == GetStorageClass()){
     requestHeaders = curl_slist_sort_insert(requestHeaders, "x-cos-storage-class", "REDUCED_REDUNDANCY");
@@ -2637,7 +2635,7 @@ int S3fsCurl::PreMultipartPostRequest(const char* tpath, headers_t& meta, string
       requestHeaders = curl_slist_sort_insert(requestHeaders, iter->first.c_str(), value.c_str());
     }
   }
-  // "x-oss-acl", storage class, sse
+  // "x-cos-acl", storage class, sse
   requestHeaders = curl_slist_sort_insert(requestHeaders, "x-cos-acl", S3fsCurl::default_acl.c_str());
   if(REDUCED_REDUNDANCY == GetStorageClass()){
     requestHeaders = curl_slist_sort_insert(requestHeaders, "x-cos-storage-class", "REDUCED_REDUNDANCY");
@@ -2852,17 +2850,16 @@ int S3fsCurl::AbortMultipartUpload(const char* tpath, string& upload_id)
 
 //
 // PUT /ObjectName?partNumber=PartNumber&uploadId=UploadId HTTP/1.1
-// Host: BucketName.oss-cn-hangzhou.aliyuncs.com
+// Host: BucketName-Appid.cn-south.myqcloud.com
 // Date: date
 // Content-Length: Size
 // Authorization: Signature
 //
 // PUT /my-movie.m2ts?partNumber=1&uploadId=VCVsb2FkIElEIGZvciBlbZZpbmcncyBteS1tb3ZpZS5tMnRzIHVwbG9hZR HTTP/1.1
-// Host: example-bucket.oss-cn-hangzhou.aliyuncs.com
+// Host: BucketName-Appid.cn-south.myqcloud.com
 // Date:  Mon, 1 Nov 2010 20:34:56 GMT
 // Content-Length: 10485760
 // Content-MD5: pUNXr/BjKK5G2UKvaRRrOA==
-// Authorization: OSS VGhpcyBtZXNzYWdlIHNpZ25lZGGieSRlbHZpbmc=
 //
 
 int S3fsCurl::UploadMultipartPostSetup(const char* tpath, int part_num, string& upload_id)
@@ -2951,7 +2948,7 @@ int S3fsCurl::UploadMultipartPostRequest(const char* tpath, int part_num, string
   // request
   if(0 == (result = RequestPerform())){
     // check etag
-	// oss's etag is upper case.
+	// cos's etag is upper case.
     if(NULL != strstr(headdata->str(), upper(partdata.etag).c_str())){
       partdata.uploaded = true;
     }else{
@@ -3000,7 +2997,7 @@ int S3fsCurl::CopyMultipartPostRequest(const char* from, const char* to, int par
       ContentType    = value;
       requestHeaders = curl_slist_sort_insert(requestHeaders, iter->first.c_str(), value.c_str());
     }
-    // NOTICE: x-oss-acl, x-oss-server-side-encryption is not set!
+    // NOTICE: x-cos-acl, x-cos-server-side-encryption is not set!
   }
 
   string date    = get_date_rfc850();
@@ -3840,7 +3837,6 @@ string get_sorted_header_keys(const struct curl_slist* list)
 
   return sorted_headers;
 }
-
 #if 0
 string get_canonical_headers(const struct curl_slist* list)
 {
@@ -3883,12 +3879,15 @@ string get_canonical_headers(const struct curl_slist* list)
     if(string::npos != (pos = strhead.find(':', 0))){
       string strkey = trim(lower(strhead.substr(0, pos)));
       string strval = trim(strhead.substr(pos + 1));
+      if (strval.empty()) {
+         continue;
+      }
       strhead       = strkey + string("=") + strval;
     }else{
       strhead       = trim(lower(strhead));
     }
-    if(strhead.substr(0, 5) != "x-cos"){
-      continue;
+    if (strhead.substr(0, 5) != "x-cos") {
+        continue;
     }
     canonical_headers += strhead;
     canonical_headers += "&";
@@ -3915,12 +3914,16 @@ string get_canonical_header_keys(const struct curl_slist* list)
     size_t pos;
     if(string::npos != (pos = strhead.find(':', 0))){
       string strkey = trim(lower(strhead.substr(0, pos)));
+      string strval = trim(strhead.substr(pos + 1));
+      if (strval.empty()) {
+         continue;
+      }
       strhead       = strkey;
     }else{
       strhead       = trim(lower(strhead));
     }
-    if(strhead.substr(0, 5) != "x-cos"){
-      continue;
+    if (strhead.substr(0, 5) != "x-cos") {
+        continue;
     }
     canonical_headers += strhead;
     if (list->next) {

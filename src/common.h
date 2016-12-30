@@ -1,7 +1,6 @@
 /*
- * s3fs - FUSE-based file system backed by Aliyun OSS
+ * s3fs - FUSE-based file system backed by Tencentyun COS
  *
- * Copyright 2007-2008 Randy Rizun <rrizun@gmail.com>
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -84,10 +83,10 @@ enum s3fs_log_level{
 
 #define S3FS_LOW_LOGPRN_EXIT(fmt, ...) \
        if(foreground){ \
-         fprintf(stderr, "ossfs: " fmt "%s\n", __VA_ARGS__); \
+         fprintf(stderr, "cosfs: " fmt "%s\n", __VA_ARGS__); \
        }else{ \
-         fprintf(stderr, "ossfs: " fmt "%s\n", __VA_ARGS__); \
-         syslog(S3FS_LOG_LEVEL_TO_SYSLOG(S3FS_LOG_CRIT), "ossfs: " fmt "%s", __VA_ARGS__); \
+         fprintf(stderr, "cosfs: " fmt "%s\n", __VA_ARGS__); \
+         syslog(S3FS_LOG_LEVEL_TO_SYSLOG(S3FS_LOG_CRIT), "cosfs: " fmt "%s", __VA_ARGS__); \
        }
 
 // [NOTE]
@@ -111,9 +110,9 @@ enum s3fs_log_level{
 typedef std::map<std::string, std::string> headers_t;
 
 //
-// Header "x-oss-meta-xattr" is for extended attributes.
+// Header "x-cos-meta-xattr" is for extended attributes.
 // This header is url encoded string which is json formated.
-//   x-oss-meta-xattr:urlencod({"xattr-1":"base64(value-1)","xattr-2":"base64(value-2)","xattr-3":"base64(value-3)"})
+//   x-cos-meta-xattr:urlencod({"xattr-1":"base64(value-1)","xattr-2":"base64(value-2)","xattr-3":"base64(value-3)"})
 //
 typedef struct xattr_value{
   unsigned char* pvalue;

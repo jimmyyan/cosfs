@@ -1,8 +1,5 @@
 /*
- * ossfs - FUSE-based file system backed by Aliyun OSS
- *
- * Copyright 2007-2013 Takeshi Nakatani <ggtakec.com>
- * Copyright 2015 Haoran Yang <yangzhuodog1982@gmail.com>
+ * cosfs - FUSE-based file system backed by Tencentyun COS
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -65,7 +62,7 @@ string get_realpath(const char *path) {
 //-------------------------------------------------------------------
 // Class S3ObjList
 //-------------------------------------------------------------------
-// New class S3ObjList is base on old oss_object struct.
+// New class S3ObjList is base on old cos_object struct.
 // This class is for OSS compatible clients.
 //
 // If name is terminated by "/", it is forced dir type.
@@ -673,7 +670,7 @@ time_t get_mtime(const char *s)
 time_t get_mtime(headers_t& meta, bool overcheck)
 {
   headers_t::const_iterator iter;
-  if(meta.end() == (iter = meta.find("x-oss-meta-mtime"))){
+  if(meta.end() == (iter = meta.find("x-cos-meta-mtime"))){
     if(overcheck){
       return get_lastmodified(meta);
     }
@@ -707,10 +704,10 @@ mode_t get_mode(headers_t& meta, const char* path, bool checkdir, bool forcedir)
   bool isS3sync = false;
   headers_t::const_iterator iter;
 
-  if(meta.end() != (iter = meta.find("x-oss-meta-mode"))){
+  if(meta.end() != (iter = meta.find("x-cos-meta-mode"))){
     mode = get_mode((*iter).second.c_str());
   }else{
-    if(meta.end() != (iter = meta.find("x-oss-meta-permissions"))){ // for s3sync
+    if(meta.end() != (iter = meta.find("x-cos-meta-permissions"))){ // for s3sync
       mode = get_mode((*iter).second.c_str());
       isS3sync = true;
     }
@@ -757,8 +754,8 @@ uid_t get_uid(const char *s)
 uid_t get_uid(headers_t& meta)
 {
   headers_t::const_iterator iter;
-  if(meta.end() == (iter = meta.find("x-oss-meta-uid"))){
-    if(meta.end() == (iter = meta.find("x-oss-meta-owner"))){ // for s3sync
+  if(meta.end() == (iter = meta.find("x-cos-meta-uid"))){
+    if(meta.end() == (iter = meta.find("x-cos-meta-owner"))){ // for s3sync
       return 0;
     }
   }
@@ -773,8 +770,8 @@ gid_t get_gid(const char *s)
 gid_t get_gid(headers_t& meta)
 {
   headers_t::const_iterator iter;
-  if(meta.end() == (iter = meta.find("x-oss-meta-gid"))){
-    if(meta.end() == (iter = meta.find("x-oss-meta-group"))){ // for s3sync
+  if(meta.end() == (iter = meta.find("x-cos-meta-gid"))){
+    if(meta.end() == (iter = meta.find("x-cos-meta-group"))){ // for s3sync
       return 0;
     }
   }
@@ -830,7 +827,7 @@ bool is_need_check_obj_detail(headers_t& meta)
   if(0 != get_size(meta)){
     return false;
   }
-  // if the object has x-oss-meta information, checking is no more.
+  // if the object has x-cos-meta information, checking is no more.
   if(meta.end() != meta.find("x-cos-meta-mode")  ||
      meta.end() != meta.find("x-cos-meta-mtime") ||
      meta.end() != meta.find("x-cos-meta-uid")   ||
@@ -868,13 +865,13 @@ void show_help (void)
     "\n"
     "Mount an Tencent COS bucket as a file system.\n"
     "\n"
-    "   General forms for ossfs and FUSE/mount options:\n"
+    "   General forms for cosfs and FUSE/mount options:\n"
     "      -o opt[,opt...]\n"
     "      -o opt [-o opt] ...\n"
     "\n"
-    "ossfs Options:\n"
+    "cosfs Options:\n"
     "\n"
-    "   Most ossfs options are given in the form where \"opt\" is:\n"
+    "   Most cosfs options are given in the form where \"opt\" is:\n"
     "\n"
     "             <option_name>=<option_value>\n"
     "\n"
@@ -914,12 +911,12 @@ void show_help (void)
     "\n"
     "   enable_noobj_cache (default is disable)\n"
     "      - enable cache entries for the object which does not exist.\n"
-    "      ossfs always has to check whether file(or sub directory) exists \n"
-    "      under object(path) when ossfs does some command, since ossfs has \n"
+    "      cosfs always has to check whether file(or sub directory) exists \n"
+    "      under object(path) when cosfs does some command, since cosfs has \n"
     "      recognized a directory which does not exist and has files or \n"
     "      sub directories under itself. It increases ListBucket request \n"
     "      and makes performance bad.\n"
-    "      You can specify this option for performance, ossfs memorizes \n"
+    "      You can specify this option for performance, cosfs memorizes \n"
     "      in stat cache that the object(file or directory) does not exist.\n"
     "\n"
     "   no_check_certificate\n"
@@ -938,9 +935,9 @@ void show_help (void)
     "\n"
     "   parallel_count (default=\"5\")\n"
     "      - number of parallel request for uploading big objects.\n"
-    "      ossfs uploads large object(over 20MB) by multipart post request, \n"
+    "      cosfs uploads large object(over 20MB) by multipart post request, \n"
     "      and sends parallel requests.\n"
-    "      This option limits parallel request count which ossfs requests \n"
+    "      This option limits parallel request count which cosfs requests \n"
     "      at once. It is necessary to set this value depending on a CPU \n"
     "      and a network band.\n"
     "\n"
@@ -990,7 +987,7 @@ void show_help (void)
     "   nocopyapi (for other incomplete compatibility object storage)\n"
     "        For a distributed object storage which is compatibility COS\n"
     "        API without PUT(copy api).\n"
-    "        If you set this option, ossfs do not use PUT with \n"
+    "        If you set this option, cosfs do not use PUT with \n"
     "        \"x-cos-copy-source\"(copy api). Because traffic is increased\n"
     "        2-3 times by this option, we do not recommend this.\n"
     "\n"
@@ -1011,7 +1008,7 @@ void show_help (void)
     "   dbglevel (default=\"crit\")\n"
     "        Set the debug message level. set value as crit(critical), err\n"
     "        (error), warn(warning), info(information) to debug level.\n"
-    "        default debug level is critical. If ossfs run with \"-d\" option,\n"
+    "        default debug level is critical. If cosfs run with \"-d\" option,\n"
     "        the debug level is set information. When cosfs catch the signal\n"
     "        SIGUSR2, the debug level is bumpup.\n"
     "\n"

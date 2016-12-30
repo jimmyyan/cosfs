@@ -1,8 +1,5 @@
 /*
- * s3fs - FUSE-based file system backed by Aliyun OSS
- *
- * Copyright 2007-2008 Randy Rizun <rrizun@gmail.com>
- * Copyright 2015 Haoran Yang <yangzhuodog1982@gmail.com>
+ * s3fs - FUSE-based file system backed by Tencentyun COS
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -3960,8 +3957,8 @@ static int read_passwd_file(void)
 // 1 - from the command line  (security risk)
 // 2 - from a password file specified on the command line
 // 3 - from environment variables
-// 4 - from the users ~/.passwd-ossfs
-// 5 - from /etc/passwd-ossfs
+// 4 - from the users ~/.passwd-cosfs
+// 5 - from /etc/passwd-cosfs
 //
 static int get_access_keys(void)
 {

@@ -1,7 +1,5 @@
 /*
- * s3fs - FUSE-based file system backed by Aliyun OSS
- *
- * Copyright 2007-2008 Randy Rizun <rrizun@gmail.com>
+ * s3fs - FUSE-based file system backed by Tencentyun COS
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -288,7 +286,7 @@ bool StatCache::AddStat(std::string& key, headers_t& meta, bool forcedir)
     }else if(tag == "last-modified"){
       ent->meta[iter->first] = value;
     }else if(tag.substr(0, 5) == "x-cos"){
-      ent->meta[tag] = value;		// key is lower case for "x-oss"
+      ent->meta[tag] = value;		// key is lower case for "x-cos"
     }
   }
   // add
