@@ -1965,7 +1965,7 @@ string S3fsCurl::CalcSignature(string method, string strMD5, string content_type
 
   string FormatString;
   FormatString += lower(method) + "\n";
-  FormatString += lower(resource) + "\n\n"; // no params
+  FormatString += resource + "\n\n"; // no params
   FormatString += get_canonical_headers(requestHeaders); // \n has been append
 
   S3FS_PRN_INFO("Format string is : %s", FormatString.c_str());
@@ -1988,7 +1988,6 @@ string S3fsCurl::CalcSignature(string method, string strMD5, string content_type
   string sign_data_hex = s3fs_hex(sign_data, sign_len);
 
   S3FS_PRN_INFO("string to sign %s", StringToSign.c_str());
-  S3FS_PRN_INFO("format string hmac-sha1 %s", sign_data);
   Signature += "q-sign-algorithm=sha1&";
   Signature += string("q-ak=") + S3fsCurl::COSAccessKeyId + "&";
   Signature += string("q-sign-time=") + q_key_time + "&";
