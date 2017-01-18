@@ -303,7 +303,7 @@ curltime_t       S3fsCurl::curl_times;
 curlprogress_t   S3fsCurl::curl_progress;
 string           S3fsCurl::curl_ca_bundle;
 mimes_t          S3fsCurl::mimeTypes;
-int              S3fsCurl::max_parallel_cnt    = 5;              // default
+int              S3fsCurl::max_parallel_cnt    = 10;              // default
 off_t            S3fsCurl::multipart_size      = MULTIPART_SIZE; // default
 bool             S3fsCurl::is_sigv4            = true;           // default
 const string     S3fsCurl::skUserAgent = "tencentyun-cosfs-v4.0()" + string(VERSION);
@@ -1088,10 +1088,17 @@ bool S3fsCurl::UploadMultipartPostCallback(S3fsCurl* s3fscurl)
   if(!s3fscurl){
     return false;
   }
-  // check etag(md5);
+  // no check etag(md5);
   // XXX cos etag requires upper case.
-  if(NULL == strstr(s3fscurl->headdata->str(), upper(s3fscurl->partdata.etag).c_str())){
-    return false;
+  // if(NULL == strstr(s3fscurl->headdata->str(), upper(s3fscurl->partdata.etag).c_str())){
+  //  return false;
+  // }
+  S3FS_PRN_ERR("headdata is : %s", s3fscurl->headdata->str());
+  string header_str(s3fscurl->headdata->str(), s3fscurl->headdata->size());
+  int pos = header_str.find("Etag: \"");
+  if (pos != std::string::npos) {
+      s3fscurl->partdata.etag = header_str.substr(pos + 7, 40);
+      S3FS_PRN_ERR("partdata.etag : %s", s3fscurl->partdata.etag.c_str());
   }
   s3fscurl->partdata.etaglist->at(s3fscurl->partdata.etagpos).assign(s3fscurl->partdata.etag);
   s3fscurl->partdata.uploaded = true;
@@ -1950,8 +1957,8 @@ string S3fsCurl::CalcSignature(string method, string strMD5, string content_type
   int key_len                = S3fsCurl::COSSecretAccessKey.size();
 
   // first, get sign key
-  time_t key_t_s = time(NULL);
-  time_t key_t_e = key_t_s + 3600; // expired after 1 hour
+  time_t key_t_s = time(NULL) - 10;
+  time_t key_t_e = key_t_s + 3700; // expired after 1 hour
   ostringstream q_key_time_tmp;
   q_key_time_tmp << key_t_s << ";" << key_t_e;
   string q_key_time = q_key_time_tmp.str();
@@ -1976,7 +1983,7 @@ string S3fsCurl::CalcSignature(string method, string strMD5, string content_type
   unsigned int md_len        = 0;
 
   string format_string_sha1 = s3fs_sha1_hex(sdata, sdata_len, &md, &md_len);
-  S3FS_PRN_INFO("format string sha1 : %s", format_string_sha1.c_str());
+  S3FS_PRN_ERR("format string sha1 : %s", format_string_sha1.c_str());
   string StringToSign;
   StringToSign += string("sha1\n");
   StringToSign += q_key_time + "\n";
@@ -2600,14 +2607,16 @@ int S3fsCurl::ListBucketRequest(const char* tpath, const char* query)
 //
 int S3fsCurl::PreMultipartPostRequest(const char* tpath, headers_t& meta, string& upload_id, bool is_copy)
 {
-  S3FS_PRN_INFO3("[tpath=%s]", SAFESTRPTR(tpath));
+  S3FS_PRN_INFO("[tpath=%s]", SAFESTRPTR(tpath));
 
+  S3FS_PRN_ERR("PreMultipartPostRequest");
   if(!tpath){
     return -1;
   }
   if(!CreateCurlHandle(true)){
     return -1;
   }
+  S3FS_PRN_ERR("PreMultipartPostRequest1");
   string resource;
   string turl;
   MakeUrlResource(get_realpath(tpath).c_str(), resource, turl);
@@ -2616,7 +2625,7 @@ int S3fsCurl::PreMultipartPostRequest(const char* tpath, headers_t& meta, string
   //XXX
   //query_string += "=";
   turl          += "?" + query_string;
-  resource      += "?" + query_string;
+  // resource      += "?" + query_string;
   url            = prepare_url(turl.c_str());
   path           = get_realpath(tpath);
   requestHeaders = NULL;
@@ -2631,16 +2640,16 @@ int S3fsCurl::PreMultipartPostRequest(const char* tpath, headers_t& meta, string
     if(key.substr(0, 9) == "x-cos-acl"){
       // not set value, but after set it.
     }else if(key.substr(0, 10) == "x-cos-meta"){
-      requestHeaders = curl_slist_sort_insert(requestHeaders, iter->first.c_str(), value.c_str());
+      // requestHeaders = curl_slist_sort_insert(requestHeaders, iter->first.c_str(), value.c_str());
     }
   }
   // "x-cos-acl", storage class, sse
-  requestHeaders = curl_slist_sort_insert(requestHeaders, "x-cos-acl", S3fsCurl::default_acl.c_str());
+  /*requestHeaders = curl_slist_sort_insert(requestHeaders, "x-cos-acl", S3fsCurl::default_acl.c_str());
   if(REDUCED_REDUNDANCY == GetStorageClass()){
     requestHeaders = curl_slist_sort_insert(requestHeaders, "x-cos-storage-class", "REDUCED_REDUNDANCY");
   } else if(STANDARD_IA == GetStorageClass()){
     requestHeaders = curl_slist_sort_insert(requestHeaders, "x-cos-storage-class", "STANDARD_IA");
-  }
+  }*/
 
 
   string date    = get_date_rfc850();
@@ -2672,6 +2681,7 @@ int S3fsCurl::PreMultipartPostRequest(const char* tpath, headers_t& meta, string
     return result;
   }
 
+  S3FS_PRN_ERR("PreMultipartPostRequest3");
   // Parse XML body for UploadId
   if(!S3fsCurl::GetUploadId(upload_id)){
     delete bodydata;
@@ -2702,7 +2712,7 @@ int S3fsCurl::CompleteMultipartPostRequest(const char* tpath, string& upload_id,
     }
     postContent += "<Part>\n";
     postContent += "  <PartNumber>" + str(cnt + 1) + "</PartNumber>\n";
-    postContent += "  <ETag>\""     + upper(parts[cnt])   + "\"</ETag>\n";
+    postContent += "  <ETag>\""     + parts[cnt]   + "\"</ETag>\n";
     postContent += "</Part>\n";
   }  
   postContent += "</CompleteMultipartUpload>\n";
@@ -2722,7 +2732,7 @@ int S3fsCurl::CompleteMultipartPostRequest(const char* tpath, string& upload_id,
 
   string query_string  = "uploadId=" + upload_id;
   turl                += "?" + query_string;
-  resource            += "?" + query_string;
+  // resource            += "?" + query_string;
   url                  = prepare_url(turl.c_str());
   path                 = get_realpath(tpath);
   requestHeaders       = NULL;
@@ -2869,17 +2879,17 @@ int S3fsCurl::UploadMultipartPostSetup(const char* tpath, int part_num, string& 
     return -1;
   }
 
-  // make md5 and file pointer
-  unsigned char *md5raw = s3fs_md5hexsum(partdata.fd, partdata.startpos, partdata.size);
-  if(md5raw == NULL){
-    S3FS_PRN_ERR("Could not make md5 for file(part %d)", part_num);
-    return -1;
-  }
-  partdata.etag = s3fs_hex(md5raw, get_md5_digest_length());
-  char* md5base64p = s3fs_base64(md5raw, get_md5_digest_length());
-  std::string md5base64 = md5base64p;
-  free(md5base64p);
-  free(md5raw);
+  // make sha1 and file pointer
+  // unsigned char *md5raw = s3fs_md5hexsum(partdata.fd, partdata.startpos, partdata.size);
+  // if(md5raw == NULL){
+  //   S3FS_PRN_ERR("Could not make md5 for file(part %d)", part_num);
+  //   return -1;
+  // }
+  // partdata.etag = s3fs_hex(md5raw, get_md5_digest_length());
+  // char* md5base64p = s3fs_base64(md5raw, get_md5_digest_length());
+  std::string md5base64; //  = md5base64p;
+  // free(md5base64p);
+  // free(md5raw);
 
   // create handle
   if(!CreateCurlHandle(true)){
@@ -2947,12 +2957,20 @@ int S3fsCurl::UploadMultipartPostRequest(const char* tpath, int part_num, string
   // request
   if(0 == (result = RequestPerform())){
     // check etag
-	// cos's etag is upper case.
-    if(NULL != strstr(headdata->str(), upper(partdata.etag).c_str())){
+	// cos's  no check etag 
+    // if(NULL != strstr(headdata->str(), upper(partdata.etag).c_str())){
+      // get etag from response header
+      S3FS_PRN_ERR("headdata is : %s", headdata->str());
+      string header_str(headdata->str(), headdata->size());
+      int pos = header_str.find("ETag: \"");
+      if (pos != std::string::npos) {
+          partdata.etag = header_str.substr(pos + 7, 40);
+          S3FS_PRN_ERR("partdata.etag : %s", partdata.etag.c_str());
+      }
       partdata.uploaded = true;
-    }else{
-      result = -1;
-    }
+    // }else{
+    //   result = -1;
+    // }
   }
 
   // closing
@@ -3148,6 +3166,7 @@ int S3fsCurl::MultipartUploadRequest(const char* tpath, headers_t& meta, int fd,
       close(fd2);
       return result;
     }
+
     list.push_back(partdata.etag);
     DestroyCurlHandle();
   }
